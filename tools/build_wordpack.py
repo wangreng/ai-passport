@@ -144,6 +144,14 @@ def to_pcm(mp3: Path, max_samples: int) -> list[int]:
     return samples
 
 
+def stale(path: Path) -> bool:
+    """Missing, or encoded at another sample rate by an older version of this script."""
+    if not path.exists():
+        return True
+    head = path.read_bytes()[:4]
+    return len(head) < 4 or head[:2] != b"WA" or head[3] != RATE // 1000
+
+
 def clip(text: str, path: Path, max_samples: int, tmp: Path) -> None:
     mp3 = tmp / "t.mp3"
     tts_mp3(text, mp3)
@@ -170,10 +178,10 @@ def main() -> int:
             keep.update({w.name, c.name})
             # A chunk change needs new chunk audio: key the chunk file on its text too.
             stamp = audio_dir / f"{slug}.c.txt"
-            if not w.exists():
+            if stale(w):
                 print(f"tts word  {en}")
                 clip(en, w, MAX_WORD_SAMPLES, tmp)
-            if not c.exists() or not stamp.exists() or stamp.read_text() != (chunk or en):
+            if stale(c) or not stamp.exists() or stamp.read_text() != (chunk or en):
                 print(f"tts chunk {chunk or en}")
                 clip(chunk or en, c, MAX_CHUNK_SAMPLES, tmp)
                 stamp.write_text(chunk or en)
