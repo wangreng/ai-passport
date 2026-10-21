@@ -25,8 +25,10 @@ jobs:
 
       - name: Install TTS tools
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
           python3 -m pip install --quiet edge-tts==7.3.1 gTTS==2.5.4
-          ffmpeg -version | head -1
+          ffmpeg -hide_banner -version
 
       - name: Build pack
         run: python3 tools/build_wordpack.py packs/words.txt packs/out
