@@ -15,6 +15,11 @@
 - 添加字库前评估 Flash 与内部 RAM 影响；ESP32-C3 无 PSRAM。
 - 不提交许可不允许分发的字库。
 
+| 文件 | 字符范围与格式 | 用途与来源 |
+| --- | --- | --- |
+| [`fonts/wb_font_cjk_14.c`](fonts/wb_font_cjk_14.c) | 14 px，4 bpp，ASCII + GB2312 全部 6763 个汉字 + 中文标点，LVGL C 源码 | 单词盒子界面文字。由 Noto Sans SC Medium（SIL OFL 1.1，npm `@expo-google-fonts/noto-sans-sc@0.4.4`）经 `lv_font_conv@1.5.3` 用 [`tools/gen_wb_fonts.py`](../tools/gen_wb_fonts.py) 生成。 |
+| [`fonts/wb_font_cjk_20.c`](fonts/wb_font_cjk_20.c) | 20 px，范围与格式同上 | 单词盒子标题和卡片中文释义。来源与脚本同上。 |
+
 ## 图片（images）
 
 可复用的源图与生成的显示资产放在 `images/`。

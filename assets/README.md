@@ -17,6 +17,11 @@ Store reusable font files and generated font sources in `fonts/`.
 - Check Flash and internal-RAM impact before adding a font; the ESP32-C3 has no PSRAM.
 - Do not commit fonts whose license does not permit redistribution.
 
+| File | Range and format | Use and source |
+| --- | --- | --- |
+| [`fonts/wb_font_cjk_14.c`](fonts/wb_font_cjk_14.c) | 14 px, 4 bpp, ASCII + 6763 GB2312 hanzi + CJK punctuation, LVGL C source | Word Box UI labels. Generated from Noto Sans SC Medium (SIL OFL 1.1, npm `@expo-google-fonts/noto-sans-sc@0.4.4`) with `lv_font_conv@1.5.3` via [`tools/gen_wb_fonts.py`](../tools/gen_wb_fonts.py). |
+| [`fonts/wb_font_cjk_20.c`](fonts/wb_font_cjk_20.c) | 20 px, same range and format | Word Box titles and Chinese meanings on cards. Same source and script. |
+
 ## Images
 
 Store reusable source images and generated display assets in `images/`.
