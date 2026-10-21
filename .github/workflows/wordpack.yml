@@ -1,0 +1,44 @@
+name: Build word pack
+
+on:
+  push:
+    branches:
+      - wordpack
+    paths:
+      - "packs/words.txt"
+      - "tools/build_wordpack.py"
+      - ".github/workflows/wordpack.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wordpack
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install TTS tools
+        run: |
+          python3 -m pip install --quiet edge-tts==7.3.1 gTTS==2.5.4
+          ffmpeg -version | head -1
+
+      - name: Build pack
+        run: python3 tools/build_wordpack.py packs/words.txt packs/out
+
+      - name: Commit pack
+        run: |
+          git config user.name "wordpack-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packs/out
+          if git diff --cached --quiet; then
+            echo "pack unchanged"
+            exit 0
+          fi
+          git commit -m "chore: rebuild word pack"
+          git push

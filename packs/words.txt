@@ -1,0 +1,7 @@
+# 单词盒子词表。一行一张卡:英文 | 词块 | 中文
+# 提交后 Actions 自动生成发音并更新 packs/out/,盒子开机自动同步。
+borrow | borrow a book | 借
+heavy | a heavy bag | 重的
+jacket | put on your jacket | 夹克
+quiet | a quiet room | 安静的
+climb | climb a tree | 爬
