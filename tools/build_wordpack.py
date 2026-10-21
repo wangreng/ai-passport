@@ -13,9 +13,12 @@ words.txt: one card per line, fields separated by | (or a full-width ｜ or a ta
 Blank lines and lines starting with # are ignored.
 
 Audio: British English TTS (edge-tts en-GB, falling back to gTTS co.uk),
-16 kHz mono, IMA ADPCM. File layout: b"WA", version 1, reserved 0,
-uint32 LE sample count, then 4-bit codes, low nibble first, predictor and
-step index both starting at 0.
+12 kHz mono, IMA ADPCM. File layout: b"WA", version 1, sample rate in kHz
+(0 means 16), uint32 LE sample count, then 4-bit codes, low nibble first,
+predictor and step index both starting at 0.
+
+Size budget: the device keeps word + chunk of one card in a 28 KB flash slot,
+so word <= 1.6 s and chunk <= 2.8 s at 6 KB/s.
 """
 import asyncio
 import hashlib
@@ -28,9 +31,9 @@ import tempfile
 import time
 from pathlib import Path
 
-RATE = 16000
-MAX_WORD_SAMPLES = RATE * 2          # 2 s
-MAX_CHUNK_SAMPLES = RATE * 3 // 1    # 3 s; word + chunk must fit one 23 KB device slot
+RATE = 12000
+MAX_WORD_SAMPLES = RATE * 16 // 10   # 1.6 s
+MAX_CHUNK_SAMPLES = RATE * 28 // 10  # 2.8 s
 VOICE = "en-GB-SoniaNeural"
 
 STEP_TABLE = [
@@ -74,7 +77,7 @@ def adpcm_encode(samples: list[int]) -> bytes:
     if len(codes) % 2:
         codes.append(0)
     body = bytes(codes[i] | (codes[i + 1] << 4) for i in range(0, len(codes), 2))
-    return b"WA" + bytes([1, 0]) + struct.pack("<I", len(samples)) + body
+    return b"WA" + bytes([1, RATE // 1000]) + struct.pack("<I", len(samples)) + body
 
 
 SEP = re.compile(r"\s*(?:\||｜|\t)\s*")
