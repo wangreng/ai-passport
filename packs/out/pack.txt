@@ -1,0 +1,7 @@
+#wordpack 1
+version=cc3a213c0fdb
+borrow|borrow a book|借|borrow-72cd0a
+heavy|a heavy bag|重的|heavy-7e8518
+jacket|put on your jacket|夹克|jacket-1cdbba
+quiet|a quiet room|安静的|quiet-58bdb0
+climb|climb a tree|爬|climb-cd4216
