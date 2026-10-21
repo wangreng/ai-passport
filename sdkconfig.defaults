@@ -27,6 +27,8 @@ CONFIG_LV_FONT_MONTSERRAT_20=y
 # 单词盒子:卡片上的大号英文。
 CONFIG_LV_FONT_MONTSERRAT_28=y
 CONFIG_LV_FONT_MONTSERRAT_36=y
+# 中文字库超过 1 MB,glyph 偏移需要大字体格式。
+CONFIG_LV_FONT_FMT_TXT_LARGE=y
 # LVGL 内置 malloc 池大小(KB)。它是独立静态区、不与系统堆共享,配大了会白白占用 RAM。
 # 单词盒子整页重建,换页瞬间新旧两屏同时存在,给 32KB。
 CONFIG_LV_MEM_SIZE_KILOBYTES=32
