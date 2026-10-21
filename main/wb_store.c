@@ -12,7 +12,7 @@ static const char *TAG = "wb_store";
 
 #define PART "wbdata"
 #define NS   "wordbox"
-#define FORMAT_VERSION 1u
+#define FORMAT_VERSION 2u   // 2: 卡片加了 slug / slot,meta 加了 last_date
 
 static esp_err_t open_rw(nvs_handle_t *h) {
     return nvs_open_from_partition(PART, NS, NVS_READWRITE, h);
@@ -70,6 +70,8 @@ esp_err_t wb_store_load(wb_deck_t *deck) {
             card.en[WB_EN_MAX - 1] = '\0';
             card.chunk[WB_CHUNK_MAX - 1] = '\0';
             card.zh[WB_ZH_MAX - 1] = '\0';
+            card.slug[WB_SLUG_MAX - 1] = '\0';
+            if (card.slot >= WB_SLOT_COUNT) card.slot = WB_SLOT_NONE;
             if (card.box > WB_BOX_DONE) card.box = WB_BOX_1;
             deck->cards[ok++] = card;
         }
@@ -160,6 +162,28 @@ esp_err_t wb_store_set_wifi(const char *ssid, const char *pass) {
     if (err != ESP_OK) return err;
     err = nvs_set_str(h, "ssid", ssid);
     if (err == ESP_OK) err = nvs_set_str(h, "pass", pass ? pass : "");
+    if (err == ESP_OK) err = nvs_commit(h);
+    nvs_close(h);
+    return err;
+}
+
+esp_err_t wb_store_get_pack_version(char *out, size_t size) {
+    out[0] = '\0';
+    nvs_handle_t h;
+    esp_err_t err = nvs_open_from_partition(PART, NS, NVS_READONLY, &h);
+    if (err != ESP_OK) return err;
+    size_t len = size;
+    err = nvs_get_str(h, "pver", out, &len);
+    if (err != ESP_OK) out[0] = '\0';
+    nvs_close(h);
+    return err;
+}
+
+esp_err_t wb_store_set_pack_version(const char *version) {
+    nvs_handle_t h;
+    esp_err_t err = open_rw(&h);
+    if (err != ESP_OK) return err;
+    err = nvs_set_str(h, "pver", version);
     if (err == ESP_OK) err = nvs_commit(h);
     nvs_close(h);
     return err;

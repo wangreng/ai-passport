@@ -13,7 +13,7 @@
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "nvs_flash.h"
+#include "wb_net.h"
 #include "wb_store.h"
 
 static const char *TAG = "wb_portal";
@@ -22,7 +22,6 @@ static const char *TAG = "wb_portal";
 #define REPLY_SIZE 512
 #define STA_RETRIES 3
 
-static bool s_net_ready;
 static esp_netif_t *s_ap_netif;
 static esp_netif_t *s_sta_netif;
 static bool s_wifi_inited;
@@ -62,13 +61,14 @@ static const char PAGE_HEAD[] =
     "</style></head><body>";
 
 static const char PAGE_FORM[] =
-    "<h1>单词盒子 · 换词</h1>"
-    "<p class=hint>一行一个词：英文 | 词块 | 中文。词块和中文可以不填。</p>"
+    "<h1>单词盒子 · 设置</h1>"
+    "<p class=hint>平时词表会从网上自动下载（连上家里 Wi-Fi 后在首页长按 下）。"
+    "这里可以临时手动加词：一行一个，英文 | 词块 | 中文，词块和中文可以不填。手动加的词没有发音。</p>"
     "<form method=post action=/save accept-charset=utf-8>"
-    "<label>本周新词</label>"
+    "<label>手动加词（选填）</label>"
     "<textarea name=words placeholder='borrow | borrow a book | 借&#10;heavy | a heavy bag | 重的&#10;jacket | 夹克'></textarea>"
     "<p class=hint>已有的词会自动跳过；毕业很久的旧卡会给新词腾位置。</p>"
-    "<label>家里 Wi-Fi 名称（选填，以后下载发音用）</label>"
+    "<label>家里 Wi-Fi 名称（下载词表和发音用）</label>"
     "<input name=ssid autocomplete=off>"
     "<label>Wi-Fi 密码</label>"
     "<input name=pass type=password autocomplete=off>"
@@ -215,19 +215,6 @@ static void on_ip_event(void *arg, esp_event_base_t base, int32_t id, void *data
     }
 }
 
-static esp_err_t net_prepare(void) {
-    if (s_net_ready) return ESP_OK;
-    // 默认 nvs 分区由 Wi-Fi 驱动内部使用(校准数据等)。
-    esp_err_t err = nvs_flash_init();
-    if (err != ESP_OK) return err;
-    err = esp_netif_init();
-    if (err != ESP_OK) return err;
-    err = esp_event_loop_create_default();
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) return err;
-    s_net_ready = true;
-    return ESP_OK;
-}
-
 const char *wb_portal_ap_ssid(void) {
     return s_ap_ssid;
 }
@@ -239,7 +226,7 @@ esp_err_t wb_portal_start(wb_portal_submit_cb_t on_submit, wb_portal_status_cb_t
     s_on_status = on_status;
     s_user = user;
 
-    esp_err_t err = net_prepare();
+    esp_err_t err = wb_net_prepare();
     if (err != ESP_OK) goto fail;
 
     s_ap_netif = esp_netif_create_default_wifi_ap();

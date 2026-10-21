@@ -37,6 +37,8 @@ static lv_obj_t *s_battery;
 static lv_obj_t *s_card_panel;
 static lv_obj_t *s_portal_upload;
 static lv_obj_t *s_portal_home;
+static lv_obj_t *s_sync_line;
+static lv_obj_t *s_sync_bar;
 static int s_last_soc = -1;
 
 void wb_ui_init(void) {
@@ -88,6 +90,8 @@ static lv_obj_t *new_screen(uint32_t bg) {
     s_card_panel = NULL;
     s_portal_upload = NULL;
     s_portal_home = NULL;
+    s_sync_line = NULL;
+    s_sync_bar = NULL;
 
     s_battery = label(s_scr, &lv_font_montserrat_14, bg == C_BOSS_BG ? C_BOSS_FG : C_MUTED, "");
     lv_obj_align(s_battery, LV_ALIGN_TOP_RIGHT, -34, 14);
@@ -141,7 +145,11 @@ void wb_ui_show_home(const wb_home_view_t *v) {
     lv_obj_t *title = label(scr, &s_cjk20, C_INK, "单词盒子");
     lv_obj_set_pos(title, 24, 12);
     char buf[96];
-    snprintf(buf, sizeof(buf), "第 %u 天", (unsigned)v->day);
+    if (v->date[0]) {
+        snprintf(buf, sizeof(buf), "%s · 第 %u 天", v->date, (unsigned)v->day);
+    } else {
+        snprintf(buf, sizeof(buf), "第 %u 天", (unsigned)v->day);
+    }
     lv_obj_t *day = label(scr, &s_cjk14, C_MUTED, buf);
     lv_obj_set_pos(day, 24, 38);
 
@@ -176,7 +184,10 @@ void wb_ui_show_home(const wb_home_view_t *v) {
     lv_obj_t *stats = label(scr, &s_cjk14, C_INK, buf);
     lv_obj_align(stats, LV_ALIGN_TOP_MID, 0, 228);
 
-    if (v->counts.unsorted) {
+    if (v->boss_day) {
+        lv_obj_t *u = label(scr, &s_cjk14, C_BOSS_HI, "今天周六，按 " LV_SYMBOL_UP " 打 Boss！");
+        lv_obj_align(u, LV_ALIGN_TOP_MID, 0, 248);
+    } else if (v->counts.unsorted) {
         snprintf(buf, sizeof(buf), "待分拣 %u 张", (unsigned)v->counts.unsorted);
         lv_obj_t *u = label(scr, &s_cjk14, C_BOX1, buf);
         lv_obj_align(u, LV_ALIGN_TOP_MID, 0, 248);
@@ -225,6 +236,12 @@ void wb_ui_show_card(const wb_card_view_t *v) {
     lv_obj_t *pill = panel(scr, 92, 10, 72, 24, tag_color, 12);
     lv_obj_t *pl = label(pill, &s_cjk14, 0xFFFFFF, tag);
     lv_obj_center(pl);
+    if (v->card->slot != WB_SLOT_NONE) {
+        // 有发音:长按 上 再听一遍。
+        lv_obj_t *spk = label(scr, &lv_font_montserrat_14, boss ? C_BOSS_FG : C_MUTED,
+                              LV_SYMBOL_VOLUME_MAX);
+        lv_obj_set_pos(spk, 176, 14);
+    }
 
     const uint32_t border = boss ? C_BOSS_HI : (v->kind == WB_SESSION_SORT ? C_POOL
                                                 : box_color(v->card->box));
@@ -255,6 +272,10 @@ void wb_ui_show_card(const wb_card_view_t *v) {
         lv_label_set_long_mode(zh, LV_LABEL_LONG_MODE_WRAP);
         lv_obj_set_style_text_align(zh, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_align(zh, LV_ALIGN_TOP_MID, 0, 158);
+        if (v->copy_hint) {
+            lv_obj_t *cp = label(s_card_panel, &s_cjk14, C_BOX1, LV_SYMBOL_EDIT " 抄到白板上");
+            lv_obj_align(cp, LV_ALIGN_BOTTOM_MID, 0, -10);
+        }
     } else {
         lv_obj_t *q = label(s_card_panel, &s_cjk14, C_MUTED, "先大声说出意思");
         lv_obj_align(q, LV_ALIGN_TOP_MID, 0, 164);
@@ -382,4 +403,85 @@ void wb_ui_show_portal(const char *ap_ssid, const char *ap_pass, const char *ip)
 void wb_ui_portal_status(const char *upload_line, const char *home_line) {
     if (upload_line && s_portal_upload) lv_label_set_text(s_portal_upload, upload_line);
     if (home_line && s_portal_home) lv_label_set_text(s_portal_home, home_line);
+}
+
+// ---------------------------------------------------------------------------
+// 去白板写
+// ---------------------------------------------------------------------------
+
+void wb_ui_show_write(const wb_card_t *card, bool boss) {
+    lv_obj_t *scr = new_screen(boss ? C_BOSS_BG : C_PAPER);
+
+    lv_obj_t *title = label(scr, &s_cjk20, boss ? C_BOSS_FG : C_INK, LV_SYMBOL_EDIT " 去白板写 3 遍");
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 12);
+
+    s_card_panel = panel(scr, 14, 44, 212, 218, C_CARD, 18);
+    lv_obj_set_style_border_color(s_card_panel, lv_color_hex(C_BOX1), 0);
+    lv_obj_set_style_border_width(s_card_panel, 3, 0);
+
+    lv_obj_t *en = label(s_card_panel, word_font(card->en), C_INK, card->en);
+    lv_obj_set_width(en, 196);
+    lv_label_set_long_mode(en, LV_LABEL_LONG_MODE_WRAP);
+    lv_obj_set_style_text_align(en, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(en, LV_ALIGN_TOP_MID, 0, 22);
+
+    if (card->chunk[0]) {
+        lv_obj_t *ch = label(s_card_panel, &lv_font_montserrat_20, C_BOX1, card->chunk);
+        lv_obj_set_width(ch, 196);
+        lv_label_set_long_mode(ch, LV_LABEL_LONG_MODE_WRAP);
+        lv_obj_set_style_text_align(ch, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(ch, LV_ALIGN_TOP_MID, 0, 82);
+    }
+    lv_obj_t *line = panel(s_card_panel, 24, 142, 164, 2, C_LINE, 1);
+    (void)line;
+    lv_obj_t *zh = label(s_card_panel, &s_cjk20, C_INK, card->zh[0] ? card->zh : "");
+    lv_obj_set_width(zh, 196);
+    lv_label_set_long_mode(zh, LV_LABEL_LONG_MODE_WRAP);
+    lv_obj_set_style_text_align(zh, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(zh, LV_ALIGN_TOP_MID, 0, 158);
+
+    hint_bar(scr, card->slot != WB_SLOT_NONE ? "写完按 OK   长按 " LV_SYMBOL_UP " 再听"
+                                            : "写完按 OK", boss);
+}
+
+// ---------------------------------------------------------------------------
+// 联网同步
+// ---------------------------------------------------------------------------
+
+void wb_ui_show_sync(void) {
+    lv_obj_t *scr = new_screen(C_PAPER);
+
+    lv_obj_t *title = label(scr, &s_cjk20, C_INK, "更新词表");
+    lv_obj_set_pos(title, 24, 12);
+
+    lv_obj_t *card = panel(scr, 14, 60, 212, 150, C_CARD, 18);
+    lv_obj_t *icon = label(card, &lv_font_montserrat_36, C_BOX2, LV_SYMBOL_WIFI);
+    lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 16);
+
+    s_sync_line = label(card, &s_cjk14, C_INK, "");
+    lv_obj_set_width(s_sync_line, 190);
+    lv_label_set_long_mode(s_sync_line, LV_LABEL_LONG_MODE_WRAP);
+    lv_obj_set_style_text_align(s_sync_line, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(s_sync_line, LV_ALIGN_TOP_MID, 0, 72);
+
+    s_sync_bar = lv_bar_create(card);
+    lv_obj_set_size(s_sync_bar, 170, 10);
+    lv_obj_align(s_sync_bar, LV_ALIGN_BOTTOM_MID, 0, -18);
+    lv_obj_set_style_bg_color(s_sync_bar, lv_color_hex(C_LINE), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(s_sync_bar, lv_color_hex(C_BOX3), LV_PART_INDICATOR);
+    lv_obj_add_flag(s_sync_bar, LV_OBJ_FLAG_HIDDEN);
+
+    hint_bar(scr, "OK 停下，先去练习", false);
+}
+
+void wb_ui_sync_status(const char *line, uint16_t done, uint16_t total) {
+    if (line && s_sync_line) lv_label_set_text(s_sync_line, line);
+    if (!s_sync_bar) return;
+    if (total == 0) {
+        lv_obj_add_flag(s_sync_bar, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_remove_flag(s_sync_bar, LV_OBJ_FLAG_HIDDEN);
+        lv_bar_set_range(s_sync_bar, 0, total);
+        lv_bar_set_value(s_sync_bar, done, LV_ANIM_OFF);
+    }
 }

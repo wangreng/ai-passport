@@ -134,3 +134,51 @@ int wb_form_get(const char *body, size_t body_len, const char *key, char *out, s
     }
     return -1;
 }
+
+static void copy_field(char *dst, size_t size, const char *b, const char *e) {
+    wb_copy_utf8(dst, size, b, (size_t)(e - b));
+}
+
+int wb_parse_pack(const char *text, size_t len, wb_parsed_word_t *out, size_t max,
+                  char *version_out, size_t version_size) {
+    static const char HEAD[] = "#wordpack 1";
+    if (version_out && version_size) version_out[0] = '\0';
+    if (len < sizeof(HEAD) - 1 || memcmp(text, HEAD, sizeof(HEAD) - 1) != 0) return -1;
+
+    size_t n = 0;
+    const char *p = text;
+    const char *end = text + len;
+    while (p < end) {
+        const char *line_end = memchr(p, '\n', (size_t)(end - p));
+        if (!line_end) line_end = end;
+        const char *e = line_end;
+        if (e > p && e[-1] == '\r') e--;
+
+        if (e - p > 8 && memcmp(p, "version=", 8) == 0) {
+            if (version_out && version_size) copy_field(version_out, version_size, p + 8, e);
+        } else if (e > p && *p != '#' && n < max) {
+            const char *f[4];
+            const char *fe[4];
+            int k = 0;
+            const char *start = p;
+            for (const char *q = p; q <= e && k < 4; q++) {
+                if (q == e || *q == '|') {
+                    f[k] = start;
+                    fe[k] = q;
+                    k++;
+                    start = q + 1;
+                }
+            }
+            if (k == 4 && fe[0] > f[0]) {
+                wb_parsed_word_t *w = &out[n++];
+                memset(w, 0, sizeof(*w));
+                copy_field(w->en, sizeof(w->en), f[0], fe[0]);
+                copy_field(w->chunk, sizeof(w->chunk), f[1], fe[1]);
+                copy_field(w->zh, sizeof(w->zh), f[2], fe[2]);
+                copy_field(w->slug, sizeof(w->slug), f[3], fe[3]);
+            }
+        }
+        p = line_end + 1;
+    }
+    return (int)n;
+}

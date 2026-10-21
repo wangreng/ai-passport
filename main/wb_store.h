@@ -1,4 +1,4 @@
-// main/wb_store.h —— 单词盒子的持久化:卡片、进度、家庭 Wi-Fi 凭据。
+// main/wb_store.h —— 单词盒子的持久化:卡片、进度、家庭 Wi-Fi 凭据、词包版本。
 //
 // 存在独立的 wbdata NVS 分区(见 partitions.csv)。只烧 app 更新固件时进度保留;
 // 烧合并镜像 full.bin 会把它清空。
@@ -27,3 +27,7 @@ esp_err_t wb_store_save_all(const wb_deck_t *deck);
 // 没存过返回 ESP_ERR_NVS_NOT_FOUND,ssid/pass 置空。
 esp_err_t wb_store_get_wifi(char ssid[WB_SSID_MAX], char pass[WB_PASS_MAX]);
 esp_err_t wb_store_set_wifi(const char *ssid, const char *pass);
+
+// 上次合并过的词包版本(pack.txt 里的 version=)。没存过返回 ESP_ERR_NVS_NOT_FOUND 并置空。
+esp_err_t wb_store_get_pack_version(char *out, size_t size);
+esp_err_t wb_store_set_pack_version(const char *version);

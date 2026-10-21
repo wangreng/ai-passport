@@ -55,6 +55,18 @@ bool wb_deck_boot(wb_deck_t *deck) {
     return false;
 }
 
+bool wb_deck_set_date(wb_deck_t *deck, uint32_t date) {
+    wb_meta_t *m = &deck->meta;
+    if (date == 0 || date <= m->last_date) return false;
+    if (m->last_date != 0) {
+        if (m->day < UINT16_MAX - 8) m->day++;
+        m->today_done = 0;
+        m->intro_today = 0;
+    }
+    m->last_date = date;
+    return true;
+}
+
 static bool is_due_review(const wb_deck_t *deck, const wb_card_t *c) {
     return (c->box == WB_BOX_1 || c->box == WB_BOX_2) && c->due_day <= deck->meta.day;
 }
@@ -223,6 +235,24 @@ static bool remove_oldest_done(wb_deck_t *deck) {
     return false;
 }
 
+// 词包是整理过的权威版本:已有的卡跟着更新 slug、词块和中文。
+// 词块变了,原来的词块发音就不对了,放掉槽位等下次同步重下。
+static void patch_from_pack(wb_card_t *c, const wb_word_t *w) {
+    char tmp[WB_CHUNK_MAX];
+    if (strcmp(c->slug, w->slug) != 0) {
+        wb_copy_utf8(c->slug, sizeof(c->slug), w->slug, strlen(w->slug));
+        c->slot = WB_SLOT_NONE;
+    }
+    if (w->chunk && w->chunk[0]) {
+        wb_copy_utf8(tmp, sizeof(tmp), w->chunk, strlen(w->chunk));
+        if (strcmp(tmp, c->chunk) != 0) {
+            memcpy(c->chunk, tmp, sizeof(c->chunk));
+            c->slot = WB_SLOT_NONE;
+        }
+    }
+    if (w->zh && w->zh[0]) wb_copy_utf8(c->zh, sizeof(c->zh), w->zh, strlen(w->zh));
+}
+
 uint16_t wb_deck_merge(wb_deck_t *deck, const wb_word_t *words, size_t n,
                        uint16_t *skipped_dup, uint16_t *dropped_full) {
     uint16_t added = 0, dup = 0, full = 0;
@@ -232,7 +262,10 @@ uint16_t wb_deck_merge(wb_deck_t *deck, const wb_word_t *words, size_t n,
         wb_copy_utf8(en, sizeof(en), words[w].en, strlen(words[w].en));
         bool exists = false;
         for (uint16_t i = 0; i < deck->meta.count && !exists; i++) {
-            exists = same_word(deck->cards[i].en, en);
+            wb_card_t *c = &deck->cards[i];
+            if (!same_word(c->en, en)) continue;
+            exists = true;
+            if (words[w].slug && words[w].slug[0]) patch_from_pack(c, &words[w]);
         }
         if (exists) {
             dup++;
@@ -249,10 +282,23 @@ uint16_t wb_deck_merge(wb_deck_t *deck, const wb_word_t *words, size_t n,
         const char *zh = words[w].zh ? words[w].zh : "";
         wb_copy_utf8(c->chunk, sizeof(c->chunk), chunk, strlen(chunk));
         wb_copy_utf8(c->zh, sizeof(c->zh), zh, strlen(zh));
+        if (words[w].slug) wb_copy_utf8(c->slug, sizeof(c->slug), words[w].slug, strlen(words[w].slug));
         c->box = WB_BOX_UNSORTED;
+        c->slot = WB_SLOT_NONE;
         added++;
     }
     if (skipped_dup) *skipped_dup = dup;
     if (dropped_full) *dropped_full = full;
     return added;
+}
+
+uint8_t wb_deck_free_slot(const wb_deck_t *deck) {
+    for (unsigned slot = 0; slot < WB_SLOT_COUNT; slot++) {
+        bool used = false;
+        for (uint16_t i = 0; i < deck->meta.count && !used; i++) {
+            used = deck->cards[i].slot == slot;
+        }
+        if (!used) return (uint8_t)slot;
+    }
+    return WB_SLOT_NONE;
 }

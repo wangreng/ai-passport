@@ -1,9 +1,12 @@
 // Host tests for the word-box scheduling model and word-list parser.
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include "wb_adpcm.h"
 #include "wb_model.h"
 #include "wb_parse.h"
+#include "wb_adpcm_vector.h"
 
 static wb_deck_t deck;
 static wb_session_t session;
@@ -17,7 +20,7 @@ static void add_words(int n) {
         names[i][2] = (char)('a' + i % 26);
         names[i][3] = (char)('0' + i / 676);
         names[i][4] = '\0';
-        words[i] = (wb_word_t){ names[i], "a chunk", "\xE5\x80\x9F" };
+        words[i] = (wb_word_t){ names[i], "a chunk", "\xE5\x80\x9F", NULL };
     }
     wb_deck_merge(&deck, words, (size_t)n, NULL, NULL);
 }
@@ -115,12 +118,101 @@ static void test_boss_clear_badge(void) {
     assert(deck.meta.badges == 1 && deck.meta.collected == 3);
 }
 
+static void test_set_date(void) {
+    wb_deck_init(&deck);
+    assert(wb_deck_set_date(&deck, 20261021));   // first sync: remember only
+    assert(deck.meta.day == 1 && deck.meta.last_date == 20261021);
+    assert(!wb_deck_set_date(&deck, 20261021));  // same day
+    deck.meta.intro_today = 3;
+    deck.meta.today_done = 1;
+    assert(wb_deck_set_date(&deck, 20261022));
+    assert(deck.meta.day == 2 && !deck.meta.today_done && deck.meta.intro_today == 0);
+    assert(!wb_deck_set_date(&deck, 20261020));  // clock went backwards: ignore
+    assert(!wb_deck_set_date(&deck, 0));
+}
+
+static void test_slug_and_slots(void) {
+    wb_deck_init(&deck);
+    wb_word_t w1[1] = { { "go", "", "", NULL } };
+    wb_deck_merge(&deck, w1, 1, NULL, NULL);
+    assert(deck.cards[0].slug[0] == '\0' && deck.cards[0].slot == WB_SLOT_NONE);
+    wb_word_t w2[2] = { { "Go", "go home", "", "go-1a2b3c" }, { "run", "", "", "run-4d5e6f" } };
+    uint16_t dup = 0;
+    assert(wb_deck_merge(&deck, w2, 2, &dup, NULL) == 1 && dup == 1);
+    assert(strcmp(deck.cards[0].slug, "go-1a2b3c") == 0);   // patched onto the old card
+    assert(strcmp(deck.cards[1].slug, "run-4d5e6f") == 0);
+    assert(wb_deck_free_slot(&deck) == 0);
+    deck.cards[0].slot = 0;
+    assert(wb_deck_free_slot(&deck) == 1);
+    deck.cards[1].slot = 1;
+    assert(wb_deck_free_slot(&deck) == 2);
+
+    // A corrected chunk in the pack updates the card and drops its audio slot.
+    wb_word_t w3[1] = { { "run", "run fast", "\xE8\xB7\x91", "run-4d5e6f" } };
+    wb_deck_merge(&deck, w3, 1, NULL, NULL);
+    assert(strcmp(deck.cards[1].chunk, "run fast") == 0 && deck.cards[1].slot == WB_SLOT_NONE);
+    assert(deck.cards[0].slot == 0);
+    // Same text again keeps the slot.
+    deck.cards[1].slot = 1;
+    wb_deck_merge(&deck, w3, 1, NULL, NULL);
+    assert(deck.cards[1].slot == 1);
+}
+
+static void test_pack(void) {
+    const char text[] =
+        "#wordpack 1\r\n"
+        "version=abc123\n"
+        "borrow|borrow a book|\xE5\x80\x9F|borrow-72cd0a\n"
+        "bad|line\n"
+        "jacket||\xE5\xA4\xB9\xE5\x85\x8B|jacket-000001\n";
+    wb_parsed_word_t out[4];
+    char ver[WB_PACK_VERSION_MAX];
+    assert(wb_parse_pack(text, sizeof(text) - 1, out, 4, ver, sizeof(ver)) == 2);
+    assert(strcmp(ver, "abc123") == 0);
+    assert(strcmp(out[0].slug, "borrow-72cd0a") == 0);
+    assert(strcmp(out[1].en, "jacket") == 0 && out[1].chunk[0] == '\0');
+    assert(wb_parse_pack("<html>", 6, out, 4, ver, sizeof(ver)) == -1);
+}
+
+static void test_adpcm(void) {
+    uint32_t rate = 0;
+    assert(wb_adpcm_parse_header(WB_VEC_ADP, sizeof(WB_VEC_ADP), &rate) == 64);
+    assert(rate == 12000);
+    assert(wb_adpcm_parse_header(WB_VEC_ADP, 20, NULL) == 0);      // truncated
+    uint8_t bad[sizeof(WB_VEC_ADP)];
+    memcpy(bad, WB_VEC_ADP, sizeof(bad));
+    bad[0] = 'X';
+    assert(wb_adpcm_parse_header(bad, sizeof(bad), NULL) == 0);
+    // Decode in two pieces to cover the streaming state.
+    int16_t pcm[64];
+    wb_adpcm_state_t st;
+    wb_adpcm_init(&st);
+    wb_adpcm_decode(&st, WB_VEC_ADP + WB_ADPCM_HEADER, 10, pcm);
+    wb_adpcm_decode(&st, WB_VEC_ADP + WB_ADPCM_HEADER + 10, 22, pcm + 20);
+    for (int i = 0; i < 64; i++) assert(pcm[i] == WB_VEC_PCM[i]);
+    // After the step size ramps up, the decoder tracks the source closely.
+    for (int i = 40; i < 64; i++) assert(abs(pcm[i] - WB_VEC_SRC[i]) < 1200);
+
+    // 12 kHz -> 16 kHz: 3 in, 4 out; split calls give the same stream.
+    wb_resample_t rs;
+    int16_t up[100];
+    const int16_t ramp[6] = { 300, 600, 900, 1200, 1500, 1800 };
+    wb_resample_init(&rs, 12000);
+    size_t n = wb_resample(&rs, ramp, 2, up);
+    n += wb_resample(&rs, ramp + 2, 4, up + n);
+    assert(n == 8);
+    // The line through (0,0),(1,300),... sampled every 0.75 input steps.
+    for (size_t i = 0; i < n; i++) assert(up[i] == (int16_t)(i * 225));
+    wb_resample_init(&rs, 16000);
+    assert(wb_resample(&rs, ramp, 6, up) == 6 && up[5] == 1800);
+}
+
 static void test_merge_dup_and_full(void) {
     wb_deck_init(&deck);
     wb_word_t w[3] = {
-        { "Borrow", "borrow a book", "\xE5\x80\x9F" },
-        { "borrow", "", "" },
-        { "", "", "" },
+        { "Borrow", "borrow a book", "\xE5\x80\x9F", NULL },
+        { "borrow", "", "", NULL },
+        { "", "", "", NULL },
     };
     uint16_t dup = 0, full = 0;
     assert(wb_deck_merge(&deck, w, 3, &dup, &full) == 1);
@@ -129,7 +221,7 @@ static void test_merge_dup_and_full(void) {
     wb_deck_init(&deck);
     add_words(WB_MAX_CARDS);
     assert(deck.meta.count == WB_MAX_CARDS);
-    wb_word_t extra[2] = { { "zebra", "", "" }, { "yak", "", "" } };
+    wb_word_t extra[2] = { { "zebra", "", "", NULL }, { "yak", "", "", NULL } };
     assert(wb_deck_merge(&deck, extra, 2, &dup, &full) == 0);
     assert(full == 2);
 
@@ -191,6 +283,10 @@ int main(void) {
     test_sort_then_daily_intro();
     test_box2_to_box3_and_boss();
     test_boss_clear_badge();
+    test_set_date();
+    test_slug_and_slots();
+    test_pack();
+    test_adpcm();
     test_merge_dup_and_full();
     test_copy_utf8();
     test_parse();

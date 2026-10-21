@@ -33,7 +33,7 @@ run_static_checks() {
         -o "${test_dir}/test_demo_navigation"
     "${test_dir}/test_demo_navigation"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
-        tests/test_wb_model.c main/wb_model.c main/wb_parse.c \
+        tests/test_wb_model.c main/wb_model.c main/wb_parse.c main/wb_adpcm.c \
         -o "${test_dir}/test_wb_model"
     "${test_dir}/test_wb_model"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \

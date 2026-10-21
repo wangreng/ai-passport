@@ -22,6 +22,9 @@
 #define WB_EN_MAX        32   // 含结尾 NUL
 #define WB_CHUNK_MAX     48
 #define WB_ZH_MAX        40   // UTF-8 字节,约 12 个汉字
+#define WB_SLUG_MAX      24   // 词包里的音频文件名前缀
+#define WB_SLOT_COUNT    120  // 发音槽数量,见 wb_slots.h
+#define WB_SLOT_NONE     0xFF
 #define WB_NEW_PER_DAY   6
 #define WB_BOSS_POINTS   5
 
@@ -38,8 +41,9 @@ typedef struct {
     char en[WB_EN_MAX];
     char chunk[WB_CHUNK_MAX];
     char zh[WB_ZH_MAX];
+    char slug[WB_SLUG_MAX]; // 来自词包;网页手填的卡为空
     uint8_t box;        // wb_box_t
-    uint8_t reserved;
+    uint8_t slot;       // 发音槽,WB_SLOT_NONE 表示还没有发音
     uint16_t due_day;   // BOX1/BOX2 在这一天(含)之后到期
 } wb_card_t;
 
@@ -52,6 +56,7 @@ typedef struct {
     uint16_t badges;         // Boss 战通关次数
     uint16_t collected;      // 历史毕业总数(含已被新词挤掉的)
     uint16_t count;          // cards 有效张数
+    uint32_t last_date;      // 联网对时后的日期 YYYYMMDD,0 表示从没对过时
 } wb_meta_t;
 
 typedef struct {
@@ -86,6 +91,10 @@ wb_counts_t wb_deck_counts(const wb_deck_t *deck);
 // 开机调用:当天已完成、或当天没有任何要做的,就进入新的一天。返回 true 表示 day 有变化(需保存 meta)。
 bool wb_deck_boot(wb_deck_t *deck);
 
+// 联网拿到北京时间后调用,date 为 YYYYMMDD。日期变了就进入新的一天
+// (第一次对时只记日期不翻天)。返回 true 表示 meta 有变化。
+bool wb_deck_set_date(wb_deck_t *deck, uint32_t date);
+
 // 今日任务的张数(到期复习 + 还能放进来的新词)。today_done 时为 0。
 uint16_t wb_today_due(const wb_deck_t *deck, uint16_t *review_out, uint16_t *fresh_out);
 
@@ -109,13 +118,19 @@ uint16_t wb_session_finish(wb_session_t *s, wb_deck_t *deck);
 
 // 合并新词。en 重复(忽略大小写)跳过;满了就挤掉最早的毕业卡。
 // 返回实际加入张数;skipped_dup / dropped_full 可为 NULL。
+// slug 可为 NULL(网页手填)。带 slug 的词来自词包:已存在的卡会跟着更新
+// slug、词块和中文,词块变了就把 slot 清成 WB_SLOT_NONE 等重下发音。
 typedef struct {
     const char *en;
     const char *chunk;
     const char *zh;
+    const char *slug;
 } wb_word_t;
 uint16_t wb_deck_merge(wb_deck_t *deck, const wb_word_t *words, size_t n,
                        uint16_t *skipped_dup, uint16_t *dropped_full);
+
+// 找一个没被任何卡占用的发音槽;都满了返回 WB_SLOT_NONE。
+uint8_t wb_deck_free_slot(const wb_deck_t *deck);
 
 // 按 UTF-8 字符边界安全复制,dst 总以 NUL 结尾。
 void wb_copy_utf8(char *dst, size_t dst_size, const char *src, size_t src_len);
