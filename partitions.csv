@@ -1,4 +1,8 @@
 # Name,   Type, SubType, Offset,   Size,     Flags
 nvs,      data, nvs,     0x9000,   0x6000,
 phy_init, data, phy,     0xf000,   0x1000,
-factory,  app,  factory, 0x10000,  0x7f0000,
+factory,  app,  factory, 0x10000,  0x400000,
+# 单词盒子:卡片与进度(独立 NVS,换固件只烧 app 时不受影响)
+wbdata,   data, nvs,     0x410000, 0x40000,
+# 发音槽:120 张卡 x 28 KB(见 main/wb_slots.h)
+wbslots,  data, 0x40,    0x450000, 0x3B0000,

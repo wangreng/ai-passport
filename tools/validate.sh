@@ -33,6 +33,10 @@ run_static_checks() {
         -o "${test_dir}/test_demo_navigation"
     "${test_dir}/test_demo_navigation"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
+        tests/test_wb_model.c main/wb_model.c main/wb_parse.c main/wb_adpcm.c \
+        -o "${test_dir}/test_wb_model"
+    "${test_dir}/test_wb_model"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
         tests/test_key_guard.c -o "${test_dir}/test_key_guard"
     "${test_dir}/test_key_guard"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Icomponents/bsp/src \
@@ -97,6 +101,10 @@ run_firmware_checks() (
     install -m 0644 \
         "${validation_build_dir}/FoloToy-AI-Passport-full.bin" \
         "${repo_root}/build/FoloToy-AI-Passport-full.bin"
+    # App-only image for updates that keep the data partitions (flash at 0x10000).
+    install -m 0644 \
+        "${validation_build_dir}/FoloToy-AI-Passport.bin" \
+        "${repo_root}/build/FoloToy-AI-Passport-app.bin"
     echo "Firmware build: PASS"
 )
 
