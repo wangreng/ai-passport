@@ -5,3 +5,46 @@ heavy | a heavy bag | 重的
 jacket | put on your jacket | 夹克
 quiet | a quiet room | 安静的
 climb | climb a tree | 爬
+eye | close your eyes | 眼睛
+nose | a big nose | 鼻子
+tooth | brush your teeth | 牙齿(复数teeth)
+hair | wash my hair | 头发
+ear | two big ears | 耳朵
+mouth | open your mouth | 嘴
+neck | a long neck | 脖子
+hand | wash your hands | 手
+arm | break my arm | 胳膊
+knee | hurt my knee | 膝盖
+foot | on foot | 脚(复数feet)
+shoulder | my left shoulder | 肩膀
+finger | cut my finger | 手指
+leg | a broken leg | 腿
+headache | have a headache | 头疼
+stomach | an empty stomach | 胃
+stomachache | have a stomachache | 胃疼
+toothache | have a toothache | 牙疼
+catch a cold | I caught a cold. | 感冒
+earache | have an earache | 耳朵疼
+run a temperature | He's running a temperature. | 发烧
+have a cough | I have a bad cough. | 咳嗽
+heart | a happy heart | 心脏
+heart attack | have a heart attack | 心脏病发作
+cancer | fight cancer | 癌症
+accident | a car accident | 事故
+ambulance | call an ambulance | 救护车
+appointment | a doctor's appointment | 预约
+back | my back hurts | 后背
+backache | have a backache | 背疼
+blood | red blood | 血液
+body | the human body | 身体
+brain | use your brain | 大脑
+break | have a break | 休息;打断
+burn | burn my hand | 烧伤
+check | check your answers | 检查
+chemist | go to the chemist's | 药剂师;药店
+clean | clean your room | 清理;干净的
+cold | a cold day | 冷的;感冒
+comb | comb your hair | 梳子
+cut | a cut on my finger | 伤口;切
+danger | in danger | 危险
+dangerous | a dangerous road | 危险的
