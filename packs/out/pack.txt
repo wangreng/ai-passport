@@ -1,7 +1,50 @@
 #wordpack 1
-version=cc3a213c0fdb
+version=2d6e68b91981
 borrow|borrow a book|借|borrow-72cd0a
 heavy|a heavy bag|重的|heavy-7e8518
 jacket|put on your jacket|夹克|jacket-1cdbba
 quiet|a quiet room|安静的|quiet-58bdb0
 climb|climb a tree|爬|climb-cd4216
+eye|close your eyes|眼睛|eye-79df4b
+nose|a big nose|鼻子|nose-1a1f58
+tooth|brush your teeth|牙齿(复数teeth)|tooth-63b3ea
+hair|wash my hair|头发|hair-bc70b0
+ear|two big ears|耳朵|ear-ddbc61
+mouth|open your mouth|嘴|mouth-87d178
+neck|a long neck|脖子|neck-bb4a91
+hand|wash your hands|手|hand-9621a2
+arm|break my arm|胳膊|arm-ed945d
+knee|hurt my knee|膝盖|knee-d22dda
+foot|on foot|脚(复数feet)|foot-32cb91
+shoulder|my left shoulder|肩膀|shoulder-a460ab
+finger|cut my finger|手指|finger-ec654d
+leg|a broken leg|腿|leg-321d6c
+headache|have a headache|头疼|headache-9023bc
+stomach|an empty stomach|胃|stomach-cfa81d
+stomachache|have a stomachache|胃疼|stomachache-91b0c2
+toothache|have a toothache|牙疼|toothache-6ff48c
+catch a cold|I caught a cold.|感冒|catch-a-cold-17e1af
+earache|have an earache|耳朵疼|earache-6c4736
+run a temperature|He's running a temperature.|发烧|run-a-temper-f4fe33
+have a cough|I have a bad cough.|咳嗽|have-a-cough-ca28a5
+heart|a happy heart|心脏|heart-ef8201
+heart attack|have a heart attack|心脏病发作|heart-attack-fc9177
+cancer|fight cancer|癌症|cancer-30632c
+accident|a car accident|事故|accident-f2b195
+ambulance|call an ambulance|救护车|ambulance-d036c1
+appointment|a doctor's appointment|预约|appointment-d93e8e
+back|my back hurts|后背|back-61bb8d
+backache|have a backache|背疼|backache-e6679d
+blood|red blood|血液|blood-c2c4a8
+body|the human body|身体|body-02083f
+brain|use your brain|大脑|brain-8b9248
+break|have a break|休息;打断|break-4f9cac
+burn|burn my hand|烧伤|burn-03b5db
+check|check your answers|检查|check-d56d98
+chemist|go to the chemist's|药剂师;药店|chemist-f2c809
+clean|clean your room|清理;干净的|clean-6a1cec
+cold|a cold day|冷的;感冒|cold-424fa4
+comb|comb your hair|梳子|comb-e51f89
+cut|a cut on my finger|伤口;切|cut-06e45e
+danger|in danger|危险|danger-222b3e
+dangerous|a dangerous road|危险的|dangerous-6e6ec3
