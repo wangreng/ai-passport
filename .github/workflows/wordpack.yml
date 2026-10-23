@@ -20,14 +20,20 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install TTS tools
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
           python3 -m pip install --quiet edge-tts==7.3.1 gTTS==2.5.4
+          # apt mirrors sometimes hang for minutes; fall back to a static ffmpeg from PyPI.
+          if ! command -v ffmpeg >/dev/null; then
+            if ! timeout 120 sh -c 'sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg'; then
+              python3 -m pip install --quiet imageio-ffmpeg==0.6.0
+              sudo ln -sf "$(python3 -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" /usr/local/bin/ffmpeg
+            fi
+          fi
           ffmpeg -hide_banner -version
 
       - name: Build pack
